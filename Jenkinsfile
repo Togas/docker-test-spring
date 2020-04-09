@@ -1,32 +1,27 @@
 pipeline {
 
     agent any
-
+    apply
     stages {
-
+    
         stage ('Build') {
             steps {
                 withMaven(maven: 'maven_3_5_0') {
-                    sh 'mvn clean package'
-                }
-            }
-        }
-
-        stage ('Deploy') {
-            steps {
-
-                withCredentials([[$class          : 'UsernamePasswordMultiBinding',
-                                  credentialsId   : 'PCF_LOGIN',
-                                  usernameVariable: 'USERNAME',
-                                  passwordVariable: 'PASSWORD']]) {
-
-                    sh '/usr/local/bin/cf login -a http://api.run.pivotal.io -u $USERNAME -p $PASSWORD'
-                    sh '/usr/local/bin/cf push'
+                    sh 'mvn clean install'
                 }
             }
 
+            
+        stage('Build image') {
+        /* This builds the actual image */
+        sh 'docker build . -t  benstucke/workbench'
+        echo '$IBM_CREDENTIAL'
+        echo 'app: $app'
+        sh 'cf login -a https://api.eu-de.cf.cloud.ibm.com -c $IBM_CREDENTIAL'
+        sh 'cf t -o "adesso Chatbot Workbench und Runtime" -s QA'
+        sh 'ibmcloud cf push cicd-jenkins-example --docker-image benstucke/workbench'
+    }
         }
-
     }
 
 }
